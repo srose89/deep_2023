@@ -684,27 +684,7 @@ def plot_trends_groupby_branch(dataset, probs, genes):
                 "showticklabels": True,
             }
         )
-    # return {
-    #     "data": fig,
-    #     "layout": go.Layout(
-    #         autosize=False,
-    #         width=800,
-    #         height=400,
-    #         xaxis={
-    #             "title": "Pseudo-time",
-    #             "showgrid": False,
-    #             "zeroline": False,
-    #             "showticklabels": False,
-    #         },
-    #         yaxis={
-    #             "title": "Gene expression",
-    #             "showgrid": False,
-    #             "zeroline": False,
-    #             "showticklabels": False,
-    #         },
-    #         legend={"x": 1, "y": 1},
-    #     ),
-    # }
+
     return fig
 
 
@@ -764,11 +744,6 @@ def plot_trends_groupby_gene(dataset, probs, genes, branches=None):
                 fig.append_trace(trace, i + 1, 1)
 
     # Layout properties
-    # fig['layout'].update(height=400 * n_branches, width=800)
-    # for i in range(1, n_branches + 1):
-    #     fig['layout'][f'xaxis{i}'].update({'title': 'Pseudo-time'})
-    #     fig['layout'][f'yaxis{i}'].update({'title': 'Normalized expression', 'zeroline': False})
-    # Layout properties
     fig["layout"].update(height=400 * n_branches, width=800, autosize=False)
     for i in range(1, n_branches + 1):
         fig["layout"][f"xaxis{i}"].update(
@@ -787,27 +762,6 @@ def plot_trends_groupby_gene(dataset, probs, genes, branches=None):
                 "showticklabels": True,
             }
         )
-    # return {
-    #     "data": fig,
-    #     "layout": go.Layout(
-    #         autosize=False,
-    #         width=800,
-    #         height=400,
-    #         xaxis={
-    #             "title": "Pseudo-time",
-    #             "showgrid": False,
-    #             "zeroline": False,
-    #             "showticklabels": False,
-    #         },
-    #         yaxis={
-    #             "title": "Gene expression",
-    #             "showgrid": False,
-    #             "zeroline": False,
-    #             "showticklabels": False,
-    #         },
-    #         legend={"x": 1, "y": 1},
-    #     ),
-    # }
 
     return fig
 
