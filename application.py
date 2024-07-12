@@ -4,8 +4,11 @@ from dash import dcc
 import dash_bootstrap_components as dbc
 from dash import html
 from dash.dependencies import Input, Output
+from dash import no_update
 import plotly.graph_objs as go
-from plotly import tools
+
+# from plotly import tools
+from plotly import subplots
 
 import numpy as np
 import pandas as pd
@@ -24,6 +27,13 @@ import matplotlib
 matplotlib.use("Agg")
 import seaborn as sns
 
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # fix back once done testing
 # data_dir = '/efs/'
@@ -87,15 +97,10 @@ app.layout = html.Div(
                 dcc.Dropdown(id="gene-name", value="MX1"),
                 html.Br(),
                 html.H6("Multiple genes"),
-
-                    dcc.Dropdown(
-                        id='multi-gene-name',
-                        value='Isg15',
-                        disabled=True,
-                        multi=True
-                    ),
-
-        html.Br(),
+                dcc.Dropdown(
+                    id="multi-gene-name", value="ISG15", disabled=True, multi=True
+                ),
+                html.Br(),
                 dcc.Markdown(
                     """
 `5/1/2023`: Data browser is now live!
@@ -287,62 +292,62 @@ Author list...
                         ),
                         # Pseudo-time
                         # TODO
-                        # dcc.Tab(
-                        #     label="Pseudo-time",
-                        #     id="pseudo-time-tab",
-                        #     children=[
-                        #         html.H6("Palantir Pseudo-time and diff. potential"),
-                        #         dbc.Row(
-                        #             [
-                        #                 dbc.Col(
-                        #                     [
-                        #                         HighResolutionGraph(
-                        #                             id="pseudo-time-graph"
-                        #                         )
-                        #                     ]
-                        #                 ),
-                        #                 dbc.Col(
-                        #                     [HighResolutionGraph(id="entropy-graph")]
-                        #                 ),
-                        #             ]
-                        #         ),
-                        #         html.H6("Branch probabilities"),
-                        #         dbc.Row(
-                        #             [
-                        #                 dbc.Col(
-                        #                     [
-                        #                         HighResolutionGraph(
-                        #                             id="branch-probs-graph"
-                        #                         )
-                        #                     ]
-                        #                 ),
-                        #             ]
-                        #         ),
-                        #         html.H6("Gene exression trends"),
-                        #         dcc.RadioItems(
-                        #             id="trend-group-by",
-                        #             value="Branch",
-                        #             options=[
-                        #                 {"label": "All branches", "value": "Branch"},
-                        #                 {"label": "Epi", "value": "EPI"},
-                        #                 {"label": "PrE/VE", "value": "PrE"},
-                        #             ],
-                        #             labelStyle={
-                        #                 "display": "inline-block",
-                        #                 "margin-right": "20px",
-                        #                 "margin-left": "5px",
-                        #             },
-                        #         ),
-                        #         dbc.Row(
-                        #             [
-                        #                 dbc.Col(
-                        #                     [HighResolutionGraph(id="trends-graph")]
-                        #                 ),
-                        #             ]
-                        #         ),
-                        #         # End tab
-                        #     ],
-                        # ),
+                        dcc.Tab(
+                            label="Pseudo-time",
+                            id="pseudo-time-tab",
+                            children=[
+                                html.H6("Palantir Pseudo-time and diff. potential"),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                HighResolutionGraph(
+                                                    id="pseudo-time-graph"
+                                                )
+                                            ]
+                                        ),
+                                        dbc.Col(
+                                            [HighResolutionGraph(id="entropy-graph")]
+                                        ),
+                                    ]
+                                ),
+                                html.H6("Branch probabilities"),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                HighResolutionGraph(
+                                                    id="branch-probs-graph"
+                                                )
+                                            ]
+                                        ),
+                                    ]
+                                ),
+                                html.H6("Gene exression trends"),
+                                dcc.RadioItems(
+                                    id="trend-group-by",
+                                    value="Branch",
+                                    options=[
+                                        {"label": "All branches", "value": "Branch"},
+                                        {"label": "Th1", "value": "Th1"},
+                                        {"label": "Tfh", "value": "Tfh"},
+                                    ],
+                                    labelStyle={
+                                        "display": "inline-block",
+                                        "margin-right": "20px",
+                                        "margin-left": "5px",
+                                    },
+                                ),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [HighResolutionGraph(id="trends-graph")]
+                                        ),
+                                    ]
+                                ),
+                                # End tab
+                            ],
+                        ),
                         # Downloads tab
                         dcc.Tab(
                             label="Downloads",
@@ -382,7 +387,7 @@ Raw count data and `scanpy Anndata` objects can be downloaded from GEO: add data
 
 # Functions
 def matplotlib_to_plotly(colormap, pl_entries=255):
-    cmap = matplotlib.cm.get_cmap(colormap)
+    cmap = matplotlib.colormaps.get_cmap(colormap)
 
     h = 1.0 / (pl_entries - 1)
     pl_colorscale = []
@@ -501,48 +506,6 @@ def plot_continuous(layout, values, gene, colormap="magma"):
     }
 
 
-# def plot_violin(values, metadata, gene, secondary=None, xlabel=''):
-#     traces = []
-
-#     # Reorder based on metadata
-#     metadata = metadata.sort_values()
-#     values = values[metadata.index]
-
-#     # Row selection
-#     row_selection = metadata
-#     if secondary is not None:
-#         row_selection = secondary[metadata.index]
-
-#     for i in np.sort(row_selection.unique()):
-#         traces.append({
-#             'type': 'violin',
-#             'x': metadata[row_selection == i],
-#             'y': values[row_selection == i],
-#             'name': i,
-#             "legendgroup": i,
-#             "scalegroup": i,
-#             'box': {'visible': True},
-#             'meanline': {'visible': True}
-#         })
-
-#     # Layout
-#     layout = go.Layout(
-#         autosize=True,
-#         yaxis={'title': 'Imputed log gene expression', 'zeroline': False},
-#         xaxis={'title': xlabel},
-#         hovermode='closest',
-#         title=gene
-#     )
-#     if secondary is not None:
-#         layout = layout.update({'violinmode': 'group'})
-
-#     return {
-#         'data': traces,
-#         'layout': layout
-#     }
-
-
-
 def plot_violin(
     values, metadata, condition_data, gene, secondary=None, xlabel="", ct_color=True
 ):
@@ -604,44 +567,14 @@ def plot_violin(
     return {"data": traces, "layout": layout}
 
 
-# def plot_heatmap(trends):
-#     print(trends)
-#     colors = cl.scales["11"]["div"]["Spectral"][::-1]
-#     colorscale = [[i, j] for i, j in zip(np.linspace(0, 1.0, len(colors)), colors)]
-
-#     #  Append each genes
-#     z = []
-#     for i in trends.index:
-#         z.append(list(scale(trends.loc[i, :])))
-#     print(z)
-
-#     data = [
-#         go.Heatmap(
-#             z=z,
-#             x=np.repeat("", trends.shape[1]),
-#             y=list(trends.index),
-#             colorscale=colorscale,
-#             zmin=-0.25,
-#             zmax=2.75,
-#         )
-#     ]
-
-#     layout = go.Layout(
-#         title="Gene expression along E8.75 guttube pseudo-space",
-#         width=700,
-#         height=900,
-#         xaxis=dict(ticks=""),
-#         yaxis=dict(ticks=""),
-#     )
-
-#     return {"data": data, "layout": layout}
-
-
 def load_trends(dataset, probs, genes):
+    logging.info("loading trends")
     # Load trends dataframe
     trends = pd.Series()
     stds = pd.Series()
-    for br in probs.columns:
+    branches = probs.columns.str.replace("^Prob_", "", regex=True)
+
+    for br in branches:
         trends[br] = (
             feather.read_dataframe(
                 f"{data_dir}/{dataset}_Prob_{br}_trends.feather", columns=genes
@@ -660,9 +593,6 @@ def load_trends(dataset, probs, genes):
     return trends, stds
 
 
-
-
-
 def get_dataframe(dataset, session_id):
     @cache.memoize()
     def query_and_serialize_data(dataset, session_id):
@@ -678,371 +608,9 @@ def get_dataframe(dataset, session_id):
     return layout, df
 
 
-# Callbacks
-
-# gene options
-@app.callback(
-    [Output("gene-name", "options"),
-    Output('multi-gene-name', 'options')]
-    #  Output('timepoint-element', 'children')
-    ,
-    [Input("dataset-dropdown", "value"), Input("tabs", "value")],
-)
-def update_options(dataset, selected_tab):
-    # Genes in dropdown
-    genes = pd.read_csv(
-        f"{data_dir}/{dataset}_genes.csv", header=None, index_col=None
-    ).iloc[:, 0]
-    
-    # Radio items
-    # if dataset == 'E85_guttube':
-    # meta_options = [
-    #     {'label': 'Cell type   ', 'value': 'CellType'},
-    #     {'label': 'Lineage  ', 'value': 'Timepoint'},
-    #     {'label': 'Clusters   ', 'value': 'clusters'}
-    # ]
-    # timepoint_element = 'Lineage expression'
-    # meta_options = [
-    #         {'label': 'Cell type   ', 'value': 'Celltype'},
-    #         {'label': 'Condition  ', 'value': 'condition'},
-    # ]
-    # else:
-    #     meta_options = [
-    #         {'label': 'Cell type   ', 'value': 'CellType'},
-    #         {'label': 'Time point  ', 'value': 'Timepoint'},
-    #         {'label': 'Clusters   ', 'value': 'clusters'}
-    #     ]
-    #     timepoint_element = 'Timepoint expression'
-
-    gene_options = [{"label": i, "value": i} for i in np.sort(genes)]
-    # return gene_options #, meta_options#, timepoint_element
-    return gene_options, gene_options
-
-# dropdown options
-@app.callback(
-    [
-        Output("dataset-dropdown", "options"),
-       # Output("dataset-dropdown", "value"),
-        Output("gene-name", "disabled"),
-        Output('multi-gene-name', 'disabled'),
-        Output('multi-gene-name', 'value'),
-    ],
-    [Input("tabs", "value")],
-)
-def update_dropdown(selected_tab):
-    if selected_tab in ["tab-1", "tab-2"]:  # , 'tab-2', 'tab-3']:
-        # DAtaset options
-        ds_options = [
-            {"label": "log normalized expression", "value": "d1d2_normlog"},
-            {"label": "MAGIC imputed expression", "value": "d1d2_imputed"},
-        ]
-
-        #return  ds_options, "d1d2_normlog", False
-        return  ds_options, False, False, 'Isg15'
-
-    elif selected_tab in ["tab-3"]:  # , 'tab-2', 'tab-3']:
-        # DAtaset options
-        ds_options = [
-            {"label": "Effector", "value": "d1d2_effector"},
-            {"label": "TCR dependent", "value": "d1d2_TCRhilo"},
-        ]
-        #return  ds_options, "d1d2_effector", False
-        return  ds_options,  False, True, 'Isg15'
-
-    # else:  # , 'tab-2', 'tab-3']:
-    #     # DAtaset options
-    #     ds_options = [
-    #         {"label": "log normalized expression", "value": "d1d2_normlog"},
-    #         {"label": "MAGIC imputed expression", "value": "d1d2_imputed"},
-    #     ]
-    #     return  ds_options, "d1d2_normlog", False
-
-
-# @app.callback([Output('dataset-dropdown', 'disabled'),
-#                Output('gene-name', 'disabled'),
-#                Output('multi-gene-name', 'disabled'),
-#                Output('multi-gene-name', 'value'),
-#                Output('dataset-dropdown', 'options'),
-#                Output('dataset-dropdown', 'value')],
-#               [Input('tabs', 'value'),
-#                Input('session-id', 'children')])
-# def tab_selection(selected_tab, session_id):
-
-#     print("getting to tab selection")
-#     print(session_id)
-#     if selected_tab in ['tab-1', 'tab-2']: #, 'tab-2', 'tab-3']:
-#         # DAtaset options
-#         ds_options = [
-#             {'label': 'log normalized expression', 'value': 'd1d2_normlog'},
-#             {'label': 'MAGIC imputed expression', 'value': 'd1d2_imputed'}
-
-#         ]
-#         return False, False, True, 'Isg15', ds_options, 'd1d2_normlog'
-
-#     elif selected_tab in ['tab-3']: #, 'tab-2', 'tab-3']:
-#         # DAtaset options
-#         ds_options = [
-#             {'label': 'Effector', 'value': 'd1d2_effector'},
-#             {'label': 'TCR High/Low', 'value': 'd1d2_TCRhilo'}
-#         ]
-#         return False, False, True, 'Isg15', ds_options, 'd1d2_effector'
-
-#     else: #, 'tab-2', 'tab-3']:
-#         # DAtaset options
-#         ds_options = [
-#             {'label': 'log normalized expression', 'value': 'd1d2_normlog'},
-#             {'label': 'MAGIC imputed expression', 'value': 'd1d2_imputed'}
-
-#         ]
-#         return False, False, True, 'Isg15', ds_options, 'd1d2_normlog'
-# elif selected_tab in ['tab-4']:
-#     ds_options = [
-#         {'label': 'E3.5-E4.5 (EPI, PrE)', 'value': 'E35_E45_sub'},
-#         {'label': 'E3.5-E5.5 (EPI, VE)', 'value': 'E35_E55_no_bridge'}
-#     ]
-#     return False, True, False, 'Fgf4', ds_options, 'E35_E45_sub'
-# else:
-#     # DAtaset options
-#     ds_options = [
-#         {'label': 'KP endothelial', 'value': 'KP_endo'},
-#     ]
-#     return False, True, False, 'Csf3', ds_options, 'KP_endo'
-
-
-
-
-
-# @app.callback(
-#     Output("meta-graph-1", "figure"),
-#     [
-#         Input("dataset-dropdown", "value"),
-#         Input("meta-field", "value"),
-#         Input("session-id", "children"),
-#     ],
-# )
-# def plot_celltype(dataset, field, session_id):
-#     # Load data
-#     layout, data_df = get_dataframe(dataset, session_id)
-#     ct_color = True
-#     graph = plot_discrete(layout, data_df[field], ct_color)
-
-#     return graph
-
-
-# def plot_gene_on_fdl(dataset, gene, session_id):
-
-#     # Load layout
-#     layout, data_df = get_dataframe(dataset, session_id)
-
-#     # Gene data
-#     exprs = feather.read_dataframe(f'{data_dir}/{dataset}_data.feather', columns=[gene])[gene]
-#     exprs = exprs + 3.3222656
-#     exprs.index = layout.index
-
-#     # Continuous plot
-#     scatter = plot_continuous(layout, exprs, gene)
-
-#     # Violin plot
-#     tp_xlabel = 'Time point'
-#     if dataset == 'E85_guttube':
-#         tp_xlabel = 'Lineage'
-#     ct_color = True
-#     if dataset == 'E35_E85_VE':
-#         ct_color = False
-#     ct_violin = plot_violin(exprs, data_df['CellType'], gene, data_df['Timepoint'],
-#                             xlabel='Cell type', ct_color=ct_color)
-#     tp_violin = plot_violin(exprs, data_df['Timepoint'], gene, data_df['CellType'],
-#                             xlabel=tp_xlabel, ct_color=ct_color)
-#     cl_violin = plot_violin(exprs, data_df['clusters'], gene,
-#                             xlabel='Cluster', ct_color=ct_color)
-
-#     return scatter, ct_violin, tp_violin, cl_violin
-
-
-@app.callback(
-    [
-        Output("expression-graph", "figure"),
-        Output("cluster-expression", "figure"),
-        Output("meta-graph-1", "figure"),
-        Output("meta-graph-2", "figure"),
-    ],
-    [
-        Input("dataset-dropdown", "value"),
-        Input("gene-name", "value"),
-        Input("meta-field-1", "value"),
-        Input("meta-field-2", "value"),
-        Input("session-id", "children"),
-    ],
-)
-def plot_gene_on_fdl(dataset, gene, meta_val_1, meta_val_2, session_id):
-    # Load layout
-    layout, data_df = get_dataframe(dataset, session_id)
-
-    #print(dataset)
-    #print(data_df.head())
-    # Gene data
-    exprs = feather.read_dataframe(
-        f"{data_dir}/{dataset}_data.feather", columns=[gene]
-    )[gene]
-
-    # exprs = exprs + 3.3222656
-    exprs.index = layout.index
-
-    # Continuous plot
-    scatter = plot_continuous(layout, exprs, gene)
-
-    # Violin plot
-    ct_violin = plot_violin(
-        exprs,
-        data_df["cluster"],
-        data_df["condition"],
-        gene,
-        xlabel="Cluster",
-        ct_color=False,
-    )
-    # ct_color=ct_color)
-
-    # metadata plot 1
-    meta1_scatter = plot_discrete(layout, data_df[meta_val_1])
-
-    # metadata plot 2
-    meta2_scatter = plot_discrete(layout, data_df[meta_val_2])
-
-    return scatter, ct_violin, meta1_scatter, meta2_scatter
-
-
-# @app.callback(
-#     [Output('ps-meta-graph', 'figure'),
-#      Output('ps-graph', 'figure')],
-#     [Input('ps-meta-field', 'value'),
-#      Input('session-id', 'children')])
-# def plot_pseudospace(field, session_id):
-#     # Load data
-#     layout, data_df = get_dataframe('E85_guttube', session_id)
-#     meta_graph = plot_discrete(layout, data_df[field])
-
-#     # Pseudo-space
-#     ps_graph = plot_continuous(layout, data_df['pseudospace'], 'Pseudo-space')
-
-#     return meta_graph, ps_graph
-
-
-# @app.callback(
-#     Output('ps-heatmap', 'figure'),
-#     [Input('dataset-dropdown', 'value'),
-#      Input('multi-gene-name', 'value'),
-#      Input('session-id', 'children')])
-# def plot_pseudospace_heatmap(dataset, genes, session_id):
-#     if dataset != 'E85_guttube':
-#         return go.Figure()
-
-#     # Load data
-#     layout, data_df = get_dataframe('E85_guttube', session_id)
-
-#     # Load gene expression
-#     if type(genes) is str:
-#         genes = [genes]
-#     exprs = feather.read_dataframe(f'{data_dir}/E85_guttube_data.feather', columns=genes)[genes[::-1]]
-#     exprs.index = data_df.index
-
-#     # Plot heatmap
-#     # Load trends dataframe
-#     trends = feather.read_dataframe(f'{data_dir}/{dataset}_pseudospace_trends.feather', columns=genes)[genes].T
-
-#     # column names
-#     bins = pd.read_pickle(f'{data_dir}/{dataset}_pseudospace_bins.p')
-#     trends.columns = bins
-
-#     graph = plot_heatmap(trends)
-
-#     return graph
-
-
-# Callbacks
-@app.callback(
-    [
-        Output("pseudo-time-graph", "figure"),
-        Output("entropy-graph", "figure"),
-        Output("branch-probs-graph", "figure"),
-    ],
-    [Input("dataset-dropdown", "value"), Input("session-id", "children")],
-)
-def plot_pseudotime(dataset, session_id):
-    if dataset not in ["d1d2_effector", "d1d2_TCRhilo"]:
-        return go.Figure(), go.Figure(), go.Figure()
-
-    # Load data
-    layout, data_df = get_dataframe(dataset, session_id)
-
-    # Trajectory and entropy
-    pt_graph = plot_continuous(layout, data_df["pseudotime"], "Pseudo-time", "plasma")
-    ent_graph = plot_continuous(layout, data_df["entropy"], "Diff. potential", "plasma")
-
-    # Branch probabilities
-    trace_list = dict()
-    for i in data_df.columns[data_df.columns.str.contains("^Prob")]:
-        trace_list[i] = plot_continuous(layout, data_df[i], i, "plasma")["data"][0]
-        trace_list[i].update(showlegend=False)
-
-    # Set up figure
-    fig = tools.make_subplots(
-        rows=1, cols=len(trace_list), subplot_titles=list(trace_list.keys())
-    )
-    for i, k in enumerate(trace_list.keys()):
-        fig.append_trace(trace_list[k], 1, i + 1)
-        fig["layout"][f"xaxis{i+1}"].update(
-            {"title": "", "showgrid": False, "zeroline": False, "showticklabels": False}
-        )
-        fig["layout"][f"yaxis{i+1}"].update(
-            {"title": "", "showgrid": False, "zeroline": False, "showticklabels": False}
-        )
-    fig["layout"].update(height=400, width=400 * len(trace_list))
-
-    return pt_graph, ent_graph, fig
-
-
-@app.callback(
-    Output("trends-graph", "figure"),
-    [
-        Input("dataset-dropdown", "value"),
-        Input("trend-group-by", "value"),
-        Input("multi-gene-name", "value"),
-        Input("session-id", "children"),
-    ],
-)
-def update_trends(dataset, group_by, genes, session_id):
-    # def update_trends(dataset, group_by, genes, session_id):
-
-    if dataset not in ["d1d2_effector", "d1d2_TCRhilo"]:
-        return go.Figure(), go.Figure()
-
-    # Load data
-    layout, data_df = get_dataframe(dataset, session_id)
-
-    # Load gene expression
-    if type(genes) is str:
-        genes = [genes]
-
-    # Plot
-    probs = data_df.loc[:, data_df.columns[data_df.columns.str.contains("^Prob")]]
-    probs.columns = probs.columns.str.replace("^Prob_", "")
-    print(probs.head())
-    if len(genes) > 0:
-        if group_by == "Branch":
-            graph = plot_trends_groupby_branch(dataset, probs, genes)
-        else:
-            branch = group_by
-            # if branch == 'PrE' and dataset == 'E35_E55_no_bridge':
-            #     branch = 'VE'
-            graph = plot_trends_groupby_gene(dataset, probs, genes, [branch])
-    else:
-        graph = go.Figure()
-    
-    return graph
-
-
+# plot gene trend across branches
 def plot_trends_groupby_branch(dataset, probs, genes):
-    # Trends grouped by gene
+    logging.info("plotting trends group by branch")
 
     # Colors
     colors = (np.array(sns.color_palette(n_colors=probs.shape[1])) * 255).astype(
@@ -1053,13 +621,18 @@ def plot_trends_groupby_branch(dataset, probs, genes):
 
     # Setup figure
     n_genes = len(genes)
-    fig = tools.make_subplots(rows=n_genes, cols=1, subplot_titles=genes)
+
+    fig = subplots.make_subplots(rows=n_genes, cols=1, subplot_titles=genes)
     # Gene trace list
     showlegend = True
+
+    # modify branch names
+    branches = probs.columns.str.replace("^Prob_", "", regex=True)
     for i, gene in enumerate(genes):
         if i > 0:
             showlegend = False
-        for j, br in enumerate(probs.columns):
+
+        for j, br in enumerate(branches):
             # Mean trace
             trace = go.Scatter(
                 x=trends[br].columns,
@@ -1093,39 +666,51 @@ def plot_trends_groupby_branch(dataset, probs, genes):
                 fig.append_trace(trace, i + 1, 1)
 
     # Layout properties
-    # fig["layout"].update(height=400 * n_genes, width=800)
-    # for i in range(1, n_genes + 1):
-    #     fig["layout"][f"xaxis{i}"].update({"title": "Pseudo-time"})
-    #     fig["layout"][f"yaxis{i}"].update(
-    #         {"title": "Gene expression", "zeroline": False}
-    #     )
-    return {
-        "data": fig,
-        "layout": go.Layout(
-            autosize=False,
-            width=800,
-            height=400,
-            xaxis={
+    fig["layout"].update(height=400 * n_genes, width=800, autosize=False)
+    for i in range(1, n_genes + 1):
+        fig["layout"][f"xaxis{i}"].update(
+            {
                 "title": "Pseudo-time",
-                "showgrid": False,
+                # "showgrid": False,
                 "zeroline": False,
                 "showticklabels": False,
-            },
-            yaxis={
-                "title": "Gene expression",
-                "showgrid": False,
-                "zeroline": False,
-                "showticklabels": False,
-            },
-            legend={"x": 1, "y": 1},
+            }
         )
-        
-    }
-    #return fig
+        fig["layout"][f"yaxis{i}"].update(
+            {
+                "title": "Gene expression",
+                "zeroline": False,
+                # "showgrid": False,
+                "showticklabels": True,
+            }
+        )
+    # return {
+    #     "data": fig,
+    #     "layout": go.Layout(
+    #         autosize=False,
+    #         width=800,
+    #         height=400,
+    #         xaxis={
+    #             "title": "Pseudo-time",
+    #             "showgrid": False,
+    #             "zeroline": False,
+    #             "showticklabels": False,
+    #         },
+    #         yaxis={
+    #             "title": "Gene expression",
+    #             "showgrid": False,
+    #             "zeroline": False,
+    #             "showticklabels": False,
+    #         },
+    #         legend={"x": 1, "y": 1},
+    #     ),
+    # }
+    return fig
 
 
+# plot gene trends colored by branches
 def plot_trends_groupby_gene(dataset, probs, genes, branches=None):
-    # Trends grouped by gene
+    logging.info("plotting trends group by gene")
 
     # Colors
     colors = (np.array(sns.color_palette(n_colors=len(genes))) * 255).astype(np.uint8)
@@ -1134,9 +719,9 @@ def plot_trends_groupby_gene(dataset, probs, genes, branches=None):
 
     # Setup figure
     if branches is None:
-        branches = probs.columns
+        branches = probs.columns.str.replace("^Prob_", "", regex=True)
     n_branches = len(branches)
-    fig = tools.make_subplots(rows=n_branches, cols=1, subplot_titles=branches)
+    fig = subplots.make_subplots(rows=n_branches, cols=1, subplot_titles=branches)
     # Gene trace list
     showlegend = True
     for i, br in enumerate(branches):
@@ -1148,29 +733,33 @@ def plot_trends_groupby_gene(dataset, probs, genes, branches=None):
             trace = go.Scatter(
                 x=trends[br].columns,
                 y=minmax_scale(trends[br].loc[gene, :]),
-                mode='lines',
+                mode="lines",
                 name=gene,
                 showlegend=showlegend,
                 hoverinfo=None,
-                line=dict(color=f'rgb({colors[j, 0]}, {colors[j, 1]}, {colors[j, 2]})'),
+                line=dict(color=f"rgb({colors[j, 0]}, {colors[j, 1]}, {colors[j, 2]})"),
             )
             fig.append_trace(trace, i + 1, 1)
 
             # Std trace
-            gene_std = stds[br].loc[gene, :] / (np.max(trends[br].loc[gene, :]) - np.min(trends[br].loc[gene, :]))
+            gene_std = stds[br].loc[gene, :] / (
+                np.max(trends[br].loc[gene, :]) - np.min(trends[br].loc[gene, :])
+            )
             trend_stds = pd.Series()
-            trend_stds['upper'] = minmax_scale(trends[br].loc[gene, :]) + gene_std
-            trend_stds['lower'] = minmax_scale(trends[br].loc[gene, :]) - gene_std
+            trend_stds["upper"] = minmax_scale(trends[br].loc[gene, :]) + gene_std
+            trend_stds["lower"] = minmax_scale(trends[br].loc[gene, :]) - gene_std
             for k in trend_stds.index:
                 trace = go.Scatter(
                     x=trends[br].columns,
                     y=trend_stds[k],
-                    mode='lines',
+                    mode="lines",
                     showlegend=False,
                     hoverinfo=None,
-                    fill='tonextx',
-                    fillcolor=f'rgba({colors[j, 0]}, {colors[j, 1]}, {colors[j, 2]}, 0.2)',
-                    line=dict(color=f'rgba({colors[j, 0]}, {colors[j, 1]}, {colors[j, 2]}, 0)'),
+                    fill="tonextx",
+                    fillcolor=f"rgba({colors[j, 0]}, {colors[j, 1]}, {colors[j, 2]}, 0.2)",
+                    line=dict(
+                        color=f"rgba({colors[j, 0]}, {colors[j, 1]}, {colors[j, 2]}, 0)"
+                    ),
                 )
                 fig.append_trace(trace, i + 1, 1)
 
@@ -1179,84 +768,273 @@ def plot_trends_groupby_gene(dataset, probs, genes, branches=None):
     # for i in range(1, n_branches + 1):
     #     fig['layout'][f'xaxis{i}'].update({'title': 'Pseudo-time'})
     #     fig['layout'][f'yaxis{i}'].update({'title': 'Normalized expression', 'zeroline': False})
-
-    return {
-        "data": fig,
-        "layout": go.Layout(
-            autosize=False,
-            width=800,
-            height=400,
-            xaxis={
+    # Layout properties
+    fig["layout"].update(height=400 * n_branches, width=800, autosize=False)
+    for i in range(1, n_branches + 1):
+        fig["layout"][f"xaxis{i}"].update(
+            {
                 "title": "Pseudo-time",
-                "showgrid": False,
+                # "showgrid": False,
                 "zeroline": False,
                 "showticklabels": False,
-            },
-            yaxis={
-                "title": "Gene expression",
-                "showgrid": False,
-                "zeroline": False,
-                "showticklabels": False,
-            },
-            legend={"x": 1, "y": 1},
+            }
         )
-        
-    }
+        fig["layout"][f"yaxis{i}"].update(
+            {
+                "title": "Gene expression",
+                "zeroline": False,
+                # "showgrid": False,
+                "showticklabels": True,
+            }
+        )
+    # return {
+    #     "data": fig,
+    #     "layout": go.Layout(
+    #         autosize=False,
+    #         width=800,
+    #         height=400,
+    #         xaxis={
+    #             "title": "Pseudo-time",
+    #             "showgrid": False,
+    #             "zeroline": False,
+    #             "showticklabels": False,
+    #         },
+    #         yaxis={
+    #             "title": "Gene expression",
+    #             "showgrid": False,
+    #             "zeroline": False,
+    #             "showticklabels": False,
+    #         },
+    #         legend={"x": 1, "y": 1},
+    #     ),
+    # }
 
-    #return fig
+    return fig
 
 
-# load gene weights for the factor
-# write a function that takes in the dataset, factor name, and session id
-# the function will then load the gene weights for the factor
-# then the function will return a dataframe with the gene weights ranked by their weights for that factor
-# @app.callback(Output('gene-weight-df', 'children'),
-#                 [Input('dataset-dropdown', 'value'),
-#                  Input('factor-name', 'value'),
-#                 Input('session-id', 'children')])
-# def load_gene_weights(dataset, factor_name, session_id):
-#     # Load gene weights
-#     data_df = get_gw_dataframe(dataset, session_id)
+#### Callbacks ####
 
-#     # extract column of data_df that corresponds to the factor
-#     factor_df = data_df[factor_name]
 
-#     # return the factor_df
-#     return factor_df
+@app.callback(
+    [
+        # Output("dataset-dropdown", "disabled"),
+        Output("gene-name", "disabled"),
+        Output("multi-gene-name", "disabled"),
+        Output("multi-gene-name", "value"),
+        Output("dataset-dropdown", "options"),
+        # Output("dataset-dropdown", "value"),
+    ],
+    [Input("tabs", "value")],
+)
+def tab_selection(selected_tab):
 
-# function that will load a figure from a png file
-# and return it as a html.Img object
-# based on the dataset selected
-# @app.callback(
-#     Output('DA-plot', 'src'),
-#     [Input('dataset-dropdown', 'value')])
-# def DAimage(dataset):
-#     if dataset == 'KP_endo':
-#         return '/assets/KP_endo_DA_plot.png'
-#     elif dataset == 'KP_fib':
-#         return '/assets/KP_fib_DA_plot.png'
-#     elif dataset == 'KP_myl':
-#         return '/assets/KP_myl_DA_plot.png'
+    if selected_tab in ["tab-1", "tab-2", "tab-4", "tab-5"]:
 
-# function that will load a figure from a png file
-# and return it as a html.Img object
-# based on the dataset selected
-# this is for the visium tissue sections and tumor states
-# @app.callback(
-#     Output('tumor-state-img', 'src'),
-#     [Input('dataset-dropdown', 'value')])
-# def tumor_state_image(dataset):
-#     if dataset == 'KP_ctrl1_A1':
-#         return '/assets/KP_ctrl1_A1_plot.png'
-#     elif dataset == 'KP_ctrl2_C1':
-#         return '/assets/KP_ctrl2_C1_plot.png'
-#     elif dataset == 'KP_DT_A1':
-#         return '/assets/KP_DT_A1_plot.png'
-#     elif dataset == 'KP_DT_C1':
-#         return '/assets/KP_DT_C1_plot.png'
+        # DAtaset options
+        ds_options = [
+            {"label": "log normalized expression", "value": "d1d2_normlog"},
+            {"label": "MAGIC imputed expression", "value": "d1d2_imputed"},
+        ]
+        logging.info("returning options")
+        # return False, False, True, "ISG15", ds_options  # , "d1d2_normlog"
+        return False, True, "ISG15", ds_options  # , "d1d2_normlog"
+
+    elif selected_tab in ["tab-3"]:  # , 'tab-2', 'tab-3']:
+        # DAtaset options
+        ds_options = [
+            {"label": "Effector", "value": "d1d2_effector"},
+            {"label": "TCR dependent", "value": "d1d2_TCRhilo"},
+        ]
+        logging.info("returning options tab 3")
+        # return False, True, False, ["ISG15", "MX1"], ds_options  # , "d1d2_effector"
+        return True, False, ["ISG15", "MX1"], ds_options  # , "d1d2_effector"
+
+
+# dropdown options
+@app.callback(
+    [
+        Output("gene-name", "options"),
+        Output("multi-gene-name", "options"),
+        Output("trend-group-by", "options"),
+    ],
+    [
+        Input("dataset-dropdown", "value"),
+    ],
+)
+def update_options(dataset):
+    logging.info("update options")
+
+    # Genes in dropdown
+    genes = pd.read_csv(
+        f"{data_dir}/{dataset}_genes.csv", header=None, index_col=None
+    ).iloc[:, 0]
+
+    gene_options = [{"label": i, "value": i} for i in np.sort(genes)]
+
+    # dropdown options
+    if dataset == "d1d2_effector":
+        branch_options = [
+            {"label": "All branches", "value": "Branch"},
+            {"label": "Th1", "value": "Th1"},
+            {"label": "Tfh", "value": "Tfh"},
+        ]
+    elif dataset == "d1d2_TCRhilo":
+        branch_options = [
+            {"label": "All branches", "value": "Branch"},
+            {"label": "TCR independent", "value": "TCR_independent"},
+            {"label": "TCR dependent", "value": "TCR_dependent"},
+        ]
+    else:
+        branch_options = [
+            {"label": "All branches", "value": "Branch"},
+            {"label": "Th1", "value": "Th1"},
+            {"label": "Tfh", "value": "Tfh"},
+        ]
+
+    return gene_options, gene_options, branch_options
+
+
+# plotting on FDL
+@app.callback(
+    [
+        Output("expression-graph", "figure"),
+        Output("cluster-expression", "figure"),
+        Output("meta-graph-1", "figure"),
+        Output("meta-graph-2", "figure"),
+    ],
+    [
+        Input("dataset-dropdown", "value"),
+        Input("gene-name", "value"),
+        Input("meta-field-1", "value"),
+        Input("meta-field-2", "value"),
+        Input("session-id", "children"),
+    ],
+)
+def plot_gene_on_fdl(dataset, gene, meta_val_1, meta_val_2, session_id):
+    logging.info("plotting on FDL")
+
+    if dataset in ["d1d2_effector", "d1d2_TCRhilo"]:
+
+        return go.Figure(), go.Figure(), go.Figure(), go.Figure()
+
+    else:
+
+        # Load layout
+        layout, data_df = get_dataframe(dataset, session_id)
+
+        # Gene data
+        exprs = feather.read_dataframe(
+            f"{data_dir}/{dataset}_data.feather", columns=[gene]
+        )[gene]
+
+        exprs.index = layout.index
+
+        # Continuous plot
+        scatter = plot_continuous(layout, exprs, gene)
+
+        # Violin plot
+        ct_violin = plot_violin(
+            exprs,
+            data_df["cluster"],
+            data_df["condition"],
+            gene,
+            xlabel="Cluster",
+            ct_color=False,
+        )
+
+        # metadata plot 1
+        meta1_scatter = plot_discrete(layout, data_df[meta_val_1])
+
+        # metadata plot 2
+        meta2_scatter = plot_discrete(layout, data_df[meta_val_2])
+
+        return scatter, ct_violin, meta1_scatter, meta2_scatter
+
+
+# pseudotime FDL
+@app.callback(
+    [
+        Output("pseudo-time-graph", "figure"),
+        Output("entropy-graph", "figure"),
+        Output("branch-probs-graph", "figure"),
+    ],
+    [Input("dataset-dropdown", "value"), Input("session-id", "children")],
+)
+def plot_pseudotime(dataset, session_id):
+    if dataset not in ["d1d2_effector", "d1d2_TCRhilo"]:
+        return go.Figure(), go.Figure(), go.Figure()
+
+    logging.info("getting to pseudotime")
+
+    # Load data
+    layout, data_df = get_dataframe(dataset, session_id)
+
+    # Trajectory and entropy
+    pt_graph = plot_continuous(layout, data_df["pseudotime"], "Pseudo-time", "plasma")
+    ent_graph = plot_continuous(layout, data_df["entropy"], "Diff. potential", "plasma")
+
+    # Branch probabilities
+    trace_list = dict()
+    for i in data_df.columns[data_df.columns.str.contains("^Prob")]:
+        trace_list[i] = plot_continuous(layout, data_df[i], i, "plasma")["data"][0]
+        trace_list[i].update(showlegend=False)
+
+    # Set up figure
+    fig = subplots.make_subplots(
+        rows=1, cols=len(trace_list), subplot_titles=list(trace_list.keys())
+    )
+    for i, k in enumerate(trace_list.keys()):
+        fig.append_trace(trace_list[k], 1, i + 1)
+        fig["layout"][f"xaxis{i+1}"].update(
+            {"title": "", "showgrid": False, "zeroline": False, "showticklabels": False}
+        )
+        fig["layout"][f"yaxis{i+1}"].update(
+            {"title": "", "showgrid": False, "zeroline": False, "showticklabels": False}
+        )
+    fig["layout"].update(height=400, width=400 * len(trace_list))
+
+    return pt_graph, ent_graph, fig
+
+
+# gene expression trends in pseudotime
+@app.callback(
+    Output("trends-graph", "figure"),
+    [
+        Input("dataset-dropdown", "value"),
+        Input("trend-group-by", "value"),
+        Input("multi-gene-name", "value"),
+        Input("session-id", "children"),
+    ],
+)
+def update_trends(dataset, group_by, genes, session_id):
+    logging.info("updating trends")
+
+    if dataset not in ["d1d2_effector", "d1d2_TCRhilo"]:
+        return go.Figure()
+
+    # Load data
+    layout, data_df = get_dataframe(dataset, session_id)
+
+    # Load gene expression
+    if type(genes) is str:
+        genes = [genes]
+
+    # Plot
+    probs = data_df.loc[:, data_df.columns[data_df.columns.str.contains("^Prob")]]
+    probs.columns = probs.columns.str.replace("^Prob_", "", regex=True)
+
+    if len(genes) > 0:
+        if group_by == "Branch":
+            graph = plot_trends_groupby_branch(dataset, probs, genes)
+        else:
+            branch = group_by
+            graph = plot_trends_groupby_gene(dataset, probs, genes, [branch])
+    else:
+        graph = go.Figure()
+
+    return graph
 
 
 if __name__ == "__main__":
-    #application.run(host = '0.0.0.0', debug=True, port=7777)
-    app.run_server(debug=False, host='0.0.0.0', port=8050)
-    #app.run_server(debug=False, port=7777)
+    logger.info("Starting the dash app")
+    app.run_server(debug=True, host="0.0.0.0", port=8050)
