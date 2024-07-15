@@ -4,7 +4,6 @@ from dash import dcc
 import dash_bootstrap_components as dbc
 from dash import html
 from dash.dependencies import Input, Output
-from dash import no_update
 import plotly.graph_objs as go
 
 # from plotly import tools
@@ -84,7 +83,7 @@ app.layout = html.Div(
         html.Div(str(uuid.uuid4()), id="session-id", style={"display": "none"}),
         # Title
         html.H2(
-            children="Differentiation of precursor central memory cells from heterogeneous naïve CD4+ T cells",
+            children="CD4+ T cell differentiation trajectory browser",
             style={"text-align": "center"},
         ),
         # Sidebar
@@ -97,9 +96,7 @@ app.layout = html.Div(
                 dcc.Dropdown(id="gene-name", value="MX1"),
                 html.Br(),
                 html.H6("Multiple genes"),
-                dcc.Dropdown(
-                    id="multi-gene-name", value="ISG15", disabled=True, multi=True
-                ),
+                dcc.Dropdown(id="multi-gene-name", value="", disabled=True, multi=True),
                 html.Br(),
                 dcc.Markdown(
                     """
@@ -121,15 +118,18 @@ app.layout = html.Div(
                             children=[
                                 html.Br(),
                                 html.Img(
-                                    src="assets/banner.jpg",
+                                    src="assets/banner.png",
                                     style={"width": "80%", "align": "center"},
                                 ),
                                 html.Br(),
                                 html.Br(),
                                 dcc.Markdown(
                                     """
-Browser description...
+This browser allows for exploration of gene expression across single cells or in relation to pseudotime trajectories from a study of CD4 T cell differentiation after antigenic challenge. 
+
 This site was developed using the [```dash```](https://dash.plot.ly) framework.
+
+See the ```Tutorial``` section below for explanation of functionality.
 
      """
                                 ),
@@ -137,7 +137,7 @@ This site was developed using the [```dash```](https://dash.plot.ly) framework.
                                     """
 ##### Study summary
 
-We ... # fill in
+Upon antigenic stimulation, naïve CD4+ T cells can give rise to phenotypically distinct effector T helper cells as well as long-lived memory T cells. Naïve T cells are considered homogenous save for their diverse T cell receptor (TCR) usage, thought to confer distinct differentiation potential according to its affinity for cognate antigen. Using complementary single cell genomic and computational approaches to reconstruct the in vivo trajectory of CD4 T cell differentiation during a type I inflammatory immune response, we identified two distinct differentiation trajectories for effector and precursor central memory T cells arising directly from naïve T cells, and putative signaling pathways aligned with these trajectories. 
     """
                                 ),
                                 dcc.Markdown(
@@ -150,9 +150,9 @@ We ... # fill in
                                     """
 ##### Datasets
 
-The following datasets are available through this website:
+The following is a description from the manuscript of the dataset used in this browser:
 
-**Dataset description...**
+To investigate the environmental signals directing CD4+ T cell heterogeneity, we adoptively transferred naïve CD90.1+ C713 T cells into B6 hosts and either parked them in the new host without challenge for 7 days or subjected them to antigenic challenge upon infection with an attenuated strain of Listeria monocytogenes (L.m.) engineered to secrete the mycobacterial protein ESAT-6 (L.M.-ESAT), containing the cognate antigen for the C7 TCR (Fig. 3a). We used the Harmony tool to stitch together scRNA-seq time points from naïve C7 T cells and C7 T cells at 16 and 40 h post-infection (hpi), and reconstructed continuous “naïve-to-effector” differentiation trajectories (Fig. 3b and Supplementary Fig. 3a).
 
 
     """
@@ -169,11 +169,13 @@ The following datasets are available through this website:
 ##### Tutorials
 
 
-We recommend using the Google Chrome browser for optimal experience. See the ```Tutorial``` tab for demonstration of the functionality.
+We recommend using the Google Chrome browser for optimal experience. 
 
 
 Navigate to the ```Gene expression``` tab and select the dataset of interest from the side bar.
-Select a gene from corresponding drop down bar to visualize normalized expression on t-SNE and as violin plots. The expression levels displayed are library size normalized and log transformed (log (x + 1)).
+Select a gene from corresponding drop down bar to visualize normalized expression on force directed layout (FDL) and as violin plots. Two FDL plots are displayed above the expression data that reflect sample or Phenograph cluster information. Datasets reflecting library size normalized and log transformed (log2 (x + .1)) expression or MAGIC imputed values can be selected from the drop down bar.
+
+Navigate to the ```Pseudo-time``` tab to visualize the pseudo-time trajectory and branch probabilities. The ```Gene expression trends``` plot at the bottom allows for visualization of gene expression trends across branches or by branch. First select the trajectory to be plotted from the dataset selection drop down, then select genes of interest from the drop down. The buttons above this plot allow for grouping across branches or within a specific branch. 
 
 
 ```plot.ly``` is used as the plotting engine. Hover for the plot for various options including zooming and downloading the plot.
@@ -197,8 +199,7 @@ See the [plot.ly tutorial](https://help.plot.ly/zoom-pan-hover-controls/) for a 
                                     """
 ##### Data access
 
-Data is available in the `Downloads` tab. The following datasets are available
-* Count matrix of all cells with metadata.
+Data access options are listed in the downloads tab. 
     """
                                 ),
                                 dcc.Markdown(
@@ -213,9 +214,11 @@ Data is available in the `Downloads` tab. The following datasets are available
 
 If you use the data, please cite our [manuscript](link to paper).
 ```
-Differentiation of precursor central memory cells from heterogeneous naïve CD4+ T cells. 
+Precursor central memory versus effector cell fate and naïve CD4 T cell heterogeneity. 
 
-Author list...
+D. Deep, H. Gudjonson, C. Brown, S. A. Rose, R. Sharma, Y. P. Iza, S. Hong, S. Hemmers, M. Schizas, Z.-M. Wang, Y. Chen, D. R. Wesemann, V. Pascual, D. Pe'er, A. Y. Rudensky. 
+
+Journal of Experimental Medicine, 2024. 
 
 
 
@@ -790,18 +793,18 @@ def tab_selection(selected_tab):
             {"label": "MAGIC imputed expression", "value": "d1d2_imputed"},
         ]
         logging.info("returning options")
-        # return False, False, True, "ISG15", ds_options  # , "d1d2_normlog"
-        return False, True, "ISG15", ds_options  # , "d1d2_normlog"
 
-    elif selected_tab in ["tab-3"]:  # , 'tab-2', 'tab-3']:
+        return False, True, "", ds_options
+
+    elif selected_tab in ["tab-3"]:
         # DAtaset options
         ds_options = [
             {"label": "Effector", "value": "d1d2_effector"},
             {"label": "TCR dependent", "value": "d1d2_TCRhilo"},
         ]
         logging.info("returning options tab 3")
-        # return False, True, False, ["ISG15", "MX1"], ds_options  # , "d1d2_effector"
-        return True, False, ["ISG15", "MX1"], ds_options  # , "d1d2_effector"
+
+        return True, False, ["ISG15", "MX1"], ds_options
 
 
 # dropdown options
