@@ -3,6 +3,8 @@ import dash
 from dash import dcc
 import dash_bootstrap_components as dbc
 from dash import html
+
+# import dash_html_components as html
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 
@@ -17,7 +19,7 @@ import feather
 import re
 from sklearn.preprocessing import scale, minmax_scale
 
-import annotations as an
+# import annotations as an
 
 from flask_caching import Cache
 
@@ -36,7 +38,11 @@ logger = logging.getLogger(__name__)
 
 # fix back once done testing
 # data_dir = '/efs/'
-data_dir = "assets"
+
+## TODO - fix volume config
+## currently all data files are passed in docker container
+# data_dir = "../deep_2023_assets/assets/"
+data_dir = "assets/"
 
 
 # Create append
@@ -44,6 +50,7 @@ external_stylesheets = [dbc.themes.BOOTSTRAP]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.title = "CD4 Differentiation Trajectory Browser"
 application = app.server
+
 
 tab_selected_style = {"padding": "4px"}
 
@@ -71,14 +78,14 @@ app.scripts.config.serve_locally = True
 # High resolution image
 def HighResolutionGraph(**kwargs):
     return dcc.Graph(
-        config={"toImageButtonOptions": {"filename": "treg_dep_image", "scale": 5}},
+        config={"toImageButtonOptions": {"filename": "cd4t_browser_image", "scale": 5}},
         **kwargs,
     )
 
 
 app.layout = html.Div(
     children=[
-        html.Link(rel="stylesheet", href="/assets/style.css"),
+        html.Link(rel="stylesheet", type="text/css", href="assets/style.css"),
         # UUid
         html.Div(str(uuid.uuid4()), id="session-id", style={"display": "none"}),
         # Title
@@ -421,9 +428,6 @@ def plot_discrete(layout, values, ct_color=True):
     traces = []
     for i in np.sort(values.astype("str").unique()):
         marker = {"size": 5, "opacity": 0.75, "line": dict(width=0.3)}
-        # ct = re.sub('[1-9].', '', i)
-        # if ct_color and ct in an.ct_colors.index:
-        #     marker['color'] = an.ct_colors[ct]
 
         traces.append(
             go.Scattergl(
@@ -620,6 +624,10 @@ def plot_trends_groupby_branch(dataset, probs, genes):
         np.uint8
     )
 
+    # if there are no genes specified, return empty figure
+    if genes == [""]:
+        return go.Figure()
+
     trends, stds = load_trends(dataset, probs, genes)
 
     # Setup figure
@@ -805,6 +813,7 @@ def tab_selection(selected_tab):
         logging.info("returning options tab 3")
 
         return True, False, ["ISG15", "MX1"], ds_options
+        # return True, False, "", ds_options
 
 
 # dropdown options
